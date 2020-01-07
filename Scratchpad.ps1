@@ -7,7 +7,7 @@ $Sku = @{
 	"EXCHANGESTANDARD"					     = "Office 365 Exchange Online Only"
 	"STANDARDPACK"						     = "Enterprise Plan E1"
 	"STANDARDWOFFPACK"					     = "Office 365 (Plan E2)"
-	"ENTERPRISEPACK"						 = "Enterprise Plan E3"
+	"ENTERPRISEPACK1"						 = "Enterprise Plan E3"
 	"ENTERPRISEPACKLRG"					     = "Enterprise Plan E3"
 	"ENTERPRISEWITHSCAL"					 = "Enterprise Plan E4"
 	"STANDARDPACK_STUDENT"				     = "Office 365 (Plan A1) for Students"
@@ -105,47 +105,31 @@ $Sku = @{
 	"EXCHANGEDESKLESS"					     = "Exchange Online Kiosk"
 	"SPZA_IW"							     = "App Connect"
 }
+$licensereport = @()
 $licensePlanList = Get-AzureADSubscribedSku
 $userList = Get-AzureADUser -all $true | Select-Object -property PhysicalDeliveryOffice, UserPrincipalName
 ForEach ($User in $userList) {
-    $lic = Get-AzureADUser -ObjectId $User.UserPrincipalName | Select-Object -ExpandProperty AssignedLicenses | select SkuID 
+    $lic = Get-AzureADUser -ObjectId $User.UserPrincipalName | Select-Object -ExpandProperty AssignedLicenses | Select-Object SkuID 
     foreach ($plan in $lic) {
         #$plannumber ++
         $NewObject01 = New-Object PSObject   
         $License = Get-AzureADSubscribedSku | Where-Object -Property SkuId -eq $plan.SkuId | Select-Object -Property SkuPartNumber
-        $TextLic = $Sku.Item("$License")
+		$TextLic = $Sku.Item($License.SkuPartNumber)
+		if (!$TextLic){
+			$TextLic = $($License.SkuPartNumber)
+		}
         $NewObject01 | Add-Member -MemberType NoteProperty -Name "License" -Value $TextLic
         #if (!$License) {continue}
         
         $NewObject01 | Add-Member -MemberType NoteProperty -Name "Month" -Value $Columndate
         $NewObject01 | Add-Member -MemberType NoteProperty -Name "User Principal Name" -Value $user.UserPrincipalName
         $NewObject01 | Add-Member -MemberType NoteProperty -Name "Office" -Value $user.PhysicalDeliveryOfficeName
-        $NewObject01
+		$NewObject01
+		$LicenseReport += $NewObject01
     } 
 
 }
     
-}
-$NewObject01
 
+$LicenseReport | Export-Excel -Path "c:\temp\licrep-$Columndate.xlsx" -AutoSize -TableName "Report_$Columndate" -WorksheetName $Columndate -WarningAction SilentlyContinue
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-$userList | foreach { $sku = $_.SkuId ; $licensePlanList | foreach { If ( $sku -eq $_.ObjectId.substring($_.ObjectId.length - 36, 36) ) { Write-Host $_.SkuPartNumber } } }
-
-
-
-
-foreach ($licence in $lic) { Get-AzureADSubscribedSku | Where-Object -Property SkuId -eq $licence.SkuID | Select-Object -Property SkuPartNumber }
